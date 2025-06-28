@@ -34,4 +34,24 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe) ## register_buffer() is used to register a buffer that is not a parameter, but should be part of the module's state.
 
         def forword(self, x):
-            
+            x = x + self.pe[:, :x.size(1)] ## add positional encodings to the input tensor x and slice it to match the input sequence length
+            return self.dropout(x) 
+        
+class LayerNormalization(nn.Module):
+    def __init__(self, d_size, eps = 10**-6):
+        super().__init__()
+        self.d_size = d_size
+        self.eps = eps
+        self.gamma = nn.Parameter(torch.ones(d_size))
+        self.beta = nn.Parameter(torch.zeros(d_size))
+
+        def forword(self, x):
+            mean = x.mean(dim = -1, keepdim=True) ## calculate the mean of the input tensor x along the last dimension
+            std = x.std(dim = -1, keepdim=True) ## calculate the standard deviation 
+            return self.gamma * (x - mean) / (std + self.eps) + self.beta ## apply layer normalization to the input tensor x using the learned parameters gamma and beta
+
+
+
+
+    
+
