@@ -101,7 +101,10 @@ class MultiHeadAttention(nn.Module):
         key = key.view(key.size(0), key.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)
         value = value.view(value.size(0), value.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k) 
 
-        x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout) # apply attention to the reshaped query, key and value tensors    
+        x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout) # apply attention to the reshaped query, key and value tensors 
+        x = x.transpose(1, 2).contiguous().view(x.size(0), -1 , self.n_heads*self.d_k) # shape: (batch_size, seq_len, d_model) 
+
+        return self.w_o(x)  # shape: (batch_size, seq_len, d_model)    
 
 
 
