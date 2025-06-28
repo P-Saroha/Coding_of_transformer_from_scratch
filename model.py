@@ -1,0 +1,37 @@
+import torch 
+import torch.nn as nn
+import math
+
+class InputEmbedding(nn.Module):
+    def __init__(self, d_size, vocab_size):
+        super().__init__()
+        self.d_size =  d_size
+        self.vocab_size = vocab_size
+        self.embedding  = nn.Embedding(vocab_size, d_size)
+
+    def forward(self, x): # forward() method: This defines how data flows through those layers — the actual computation of the model.
+        return self.embedding(x) * math.sqrt(self.d_size)
+    
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_size, seq_len, dropout):
+        super().__init__()
+        self.d_size = d_size
+        self.seq_len = seq_len
+        self.dropout = nn.Dropout(dropout)
+
+        ## create a matrix of positional encodings of shape (seq_len, d_size)
+        pe = torch.zeros(seq_len, d_size)
+
+        ## create a vactor of shape (seq_len, 1)
+        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1) ## unsqueeze(1) adds a new dimension to the tensor, making it of shape (seq_len, 1)
+        div_term = torch.exp(torch.arange(0, d_size, 2).float() * (-math.log(10000.0) / d_size))## this creates a vector of shape (d_size/2,) 
+        ## calculate the positional encodings using sine and cosine functions
+        pe[:, 0::2] = torch.sin(position * div_term) ## even indices    
+        pe[:, 1::2] = torch.cos(position * div_term)
+
+        pe = pe.unsqueeze(0) ## unsqueeze(0) adds a new dimension to the tensor, making it of shape (1, seq_len, d_size)
+        self.register_buffer('pe', pe) ## register_buffer() is used to register a buffer that is not a parameter, but should be part of the module's state.
+
+        def forword(self, x):
+            
