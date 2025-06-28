@@ -51,7 +51,13 @@ class LayerNormalization(nn.Module):
             return self.gamma * (x - mean) / (std + self.eps) + self.beta ## apply layer normalization to the input tensor x using the learned parameters gamma and beta
 
 
-
-
+class FeedForward(nn.Module):
+    def __init__(self,d_model, d_ff, dropout):
+        super().__init__()
+        self.linear_1 = nn.Linear(d_model, d_ff)
+        self.d_ff = d_ff 
+        self.dropout = nn.Dropout(dropout)
     
+    def forword(self, x):
+        x = nn.Linear(self.d_model, self.d_ff)(x)
 
