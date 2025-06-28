@@ -84,20 +84,24 @@ class MultiHeadAttention(nn.Module):
         value = self.w_v(v)    # shape: (batch_size, seq_len, d_model) 
 
         @staticmethod
-        def attention(query, key, value, mask=None):
+        def attention(query, key, value, mask, dropout: nn.Dropout):
             d_k = query.size(-1)        # dimension of each head
             scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
             if mask is not None:
                 scores = scores.masked_fill(mask == 0, -1e9)    # apply mask to the scores  
+            if dropout is not None:
+                attn_weights = self.dropout(attn_weights) # apply dropout to the attention weights
             attn_weights = torch.softmax(scores, dim=-1)
-            attn_weights = self.dropout(attn_weights)  # apply dropout to attention weights
-            return torch.matmul(attn_weights, value)
-        # Calculate attention scores
+            output = torch.matmul(attn_weights, value)  # shape: (batch_size, seq_len, d_model)
+            return output, attn_weights 
+        
 
-        # Reshape and transpose to get (batch_size, n_heads, seq_len, d_k)
+        # Reshape and transpose to get (batch_size, n_heads, seq_len, d_k) 
         query = query.view(query.size(0), query.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)
         key = key.view(key.size(0), key.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)
-        value = value.view(value.size(0), value.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)       
+        value = value.view(value.size(0), value.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k) 
+
+        x, self.attention_scores = MultiHeadAttention.attention(query, key, value, mask, self.dropout) # apply attention to the reshaped query, key and value tensors    
 
 
 
