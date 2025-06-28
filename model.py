@@ -54,10 +54,26 @@ class LayerNormalization(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self,d_model, d_ff, dropout):
         super().__init__()
-        self.linear_1 = nn.Linear(d_model, d_ff)
-        self.d_ff = d_ff 
+        self.linear_1 = nn.Linear(d_model, d_ff) ## first linear layer w1 , b1
         self.dropout = nn.Dropout(dropout)
-    
-    def forword(self, x):
-        x = nn.Linear(self.d_model, self.d_ff)(x)
+        self.linear_2 = nn.Linear(d_ff, d_model) ## second linear layer w2, b2
+        self.activation = nn.ReLU() ## activation function
 
+        
+    def forword(self, x):
+        return self.linear_2(self.dropout(self.activation(self.linear_1(x)))) ## apply the feedforward network to the input tensor x, passing it through the two linear layers with dropout and activation in between
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, n_heads, dropout):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
+        
+        self.d_k = d_model // n_heads
+        self.w_q = nn.Linear(d_model, d_model)  # weight matrix for queries
+        self.w_k = nn.Linear(d_model, d_model)  # weight matrix for keys    
+        self.w_v = nn.Linear(d_model, d_model)  # weight matrix for values
+        self.dropout = nn.Dropout(dropout)
+        
