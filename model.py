@@ -71,9 +71,34 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
         
-        self.d_k = d_model // n_heads
+        self.d_k = d_model // n_heads # dimension of each head 
         self.w_q = nn.Linear(d_model, d_model)  # weight matrix for queries
         self.w_k = nn.Linear(d_model, d_model)  # weight matrix for keys    
         self.w_v = nn.Linear(d_model, d_model)  # weight matrix for values
+        self.w_o = nn.Linear(d_model, d_model)  # weight matrix for output 
         self.dropout = nn.Dropout(dropout)
-        
+
+    def forward(self, q, k, v, mask=None):
+        query = self.w_q(q)  # shape: (batch_size, seq_len, d_model)
+        key = self.w_k(k)      # shape: (batch_size, seq_len, d_model)
+        value = self.w_v(v)    # shape: (batch_size, seq_len, d_model) 
+
+        @staticmethod
+        def attention(query, key, value, mask=None):
+            d_k = query.size(-1)        # dimension of each head
+            scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
+            if mask is not None:
+                scores = scores.masked_fill(mask == 0, -1e9)    # apply mask to the scores  
+            attn_weights = torch.softmax(scores, dim=-1)
+            attn_weights = self.dropout(attn_weights)  # apply dropout to attention weights
+            return torch.matmul(attn_weights, value)
+        # Calculate attention scores
+
+        # Reshape and transpose to get (batch_size, n_heads, seq_len, d_k)
+        query = query.view(query.size(0), query.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)
+        key = key.view(key.size(0), key.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)
+        value = value.view(value.size(0), value.size(1), self.n_heads, self.d_k).transpose(1, 2) # shape: (batch_size, n_heads, seq_len, d_k)       
+
+
+
+
