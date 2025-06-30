@@ -116,3 +116,24 @@ class ResidualConnection(nn.Module):
     def forward(self, x, sublayer):
         return x + self.dropout(sublayer(self.norm(x)))  # apply residual connection and layer normalization to the input tensor x and the output of the sublayer
 
+class EncoderBlock(nn.Module):
+    def __init__(self, d_model, n_heads, d_ff, dropout):
+        super().__init__()
+        self.attention = MultiHeadAttention(d_model, n_heads, dropout)
+        self.feed_forward = FeedForward(d_model, d_ff, dropout)
+        self.residual_attention = ResidualConnection(dropout)
+        self.residual_feed_forward = ResidualConnection(dropout)
+
+    def forward(self, x, mask=None):
+        x = self.residual_attention(x, lambda x: self.attention(x, x, x, mask))  # apply multi-head attention with residual connection
+        return self.residual_feed_forward(x, self.feed_forward)  # apply feedforward network with residual connection
+    
+class Encoder(nn.Module):
+    def __init__(self, d_model, n_heads, d_ff, dropout, n_layers): # number of layers in the encoder and other hyperparameters which define the architecture of the encoder
+        super().__init__()
+        self.layers = nn.ModuleList([EncoderBlock(d_model, n_heads, d_ff, dropout) for _ in range(n_layers)])  # create a list of encoder blocks and store them in a ModuleList for easy iteration and parameter management
+
+    def forward(self, x, mask=None): # forward() method: This defines how data flows through those layers — the actual computation of the model.
+        for layer in self.layers:
+            x = layer(x, mask)  # apply each encoder block to the input tensor x
+        return x  # return the final output tensor after passing through all encoder blocks
