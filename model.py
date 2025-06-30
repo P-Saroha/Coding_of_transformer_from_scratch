@@ -137,3 +137,41 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x, mask)  # apply each encoder block to the input tensor x
         return x  # return the final output tensor after passing through all encoder blocks
+    
+class DecoderBlock(nn.Module):
+    def __init__(self, self_attention_block: MultiHeadAttention, cross_attention_block: MultiHeadAttention, feed_forward_block: FeedForward, dropout: nn.Dropout):
+        super().__init__()
+        self.self_attention = ResidualConnection(dropout)
+        self.cross_attention = ResidualConnection(dropout)
+        self.feed_forward = ResidualConnection(dropout)
+        self.self_attention_block = self_attention_block
+        self.cross_attention_block = cross_attention_block
+        self.feed_forward_block = feed_forward_block
+
+    def forward(self, x, encoder_output, self_attention_mask=None, cross_attention_mask=None):
+        x = self.self_attention(x, lambda x: self.self_attention_block(x, x, x, self_attention_mask))   # apply self-attention with residual connection 
+        x = self.cross_attention(x, lambda x: self.cross_attention_block(x, encoder_output, encoder_output, cross_attention_mask))  # apply cross-attention with residual connection
+        return self.feed_forward(x, self.feed_forward_block)        
+    
+class Decoder(nn.Module):
+    def __init__(self, d_model, n_heads, d_ff, dropout, n_layers):
+        super().__init__()
+        self.layers = nn.ModuleList([DecoderBlock(
+            MultiHeadAttention(d_model, n_heads, dropout),
+            MultiHeadAttention(d_model, n_heads, dropout),
+            FeedForward(d_model, d_ff, dropout),
+            nn.Dropout(dropout)
+        ) for _ in range(n_layers)])  # create a list of decoder blocks and store them in a ModuleList for easy iteration and parameter management
+
+    def forward(self, x, encoder_output, self_attention_mask=None, cross_attention_mask=None):
+        for layer in self.layers:
+            x = layer(x, encoder_output, self_attention_mask, cross_attention_mask)  # apply each decoder block to the input tensor x and the encoder output
+        return x  # return the final output tensor after passing through all decoder blocks
+    
+class ProjectionLayer(nn.Module):
+    def __init__(self, d_model, vocab_size):
+        super().__init__()
+        self.linear = nn.Linear(d_model, vocab_size)  # linear layer to project the output of the decoder to the vocabulary size
+
+    def forward(self, x):
+        return torch.log_softmax(self.proj(x), dim = -1 ) # apply the linear layer to the input tensor x and return the output tensor
