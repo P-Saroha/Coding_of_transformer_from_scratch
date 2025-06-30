@@ -107,5 +107,12 @@ class MultiHeadAttention(nn.Module):
         return self.w_o(x)  # shape: (batch_size, seq_len, d_model)    
 
 
+class ResidualConnection(nn.Module):
+    def __init__(self, dropout):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.norm = LayerNormalization()
 
+    def forward(self, x, sublayer):
+        return x + self.dropout(sublayer(self.norm(x)))  # apply residual connection and layer normalization to the input tensor x and the output of the sublayer
 
